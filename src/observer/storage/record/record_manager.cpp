@@ -443,14 +443,14 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
   //一个页面最多能存储多少个元组
   int max_num = page_header_->record_capacity;
   int offset = 0;
-
-  char *record_data = get_record_data_for_pax(index,0);
+  
+  char *record_data_first = get_record_data(0);
 
   for(int i=0;i<page_header_->column_num;i++)
-  {
+  { 
     //复制进页面
-    memcpy(record_data+offset*max_num,data+offset,get_field_len(i));
-    offset = get_field_len(0)+offset;
+    memcpy(record_data_first+offset*max_num+index*get_field_len(i),data+offset,get_field_len(i));
+    offset = get_field_len(i)+offset;
   }
   frame_->mark_dirty();
 
