@@ -326,6 +326,9 @@ public:
 
   virtual RC delete_record(const RID *rid) override;
 
+
+  virtual char* get_record_data_for_pax(SlotNum slot_num,unsigned int col_num);
+
   /**
    * @brief 获取指定位置的记录数据
    *
