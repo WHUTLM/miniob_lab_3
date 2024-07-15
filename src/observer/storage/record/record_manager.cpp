@@ -522,6 +522,8 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
   Bitmap bitmap(bitmap_,page_header_->record_capacity);
   int index = 0;
 
+
+
   index = bitmap.next_setted_bit(0);
   while(index!=-1)
   {
@@ -530,6 +532,11 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
       unsigned int offset = 0;
       int j = 0;
       int id = chunk.column_ids(i);
+      if (id >= page_header_ ->column_num){
+        LOG_ERROR("getchunk Invalid column num;%d, column is empty, page_num %d.", id, 
+        frame ->page_num());
+        return RC::RECORD_NOT_EXIST;
+      }      
       while (j<id)
       {
         offset += get_field_len(j)*max_num;
