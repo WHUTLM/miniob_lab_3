@@ -534,7 +534,7 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
       {
         offset += get_field_len(j)*max_num;
       }
-      chunk.column_ptr(i)->append_one(get_record_data(0)+index*get_field_len(0)+offset);
+      chunk.column_ptr(i)->append_one(get_record_data(0)+index*get_field_len(id)+offset);
     }
     index = bitmap.next_setted_bit(index+1);
   }
