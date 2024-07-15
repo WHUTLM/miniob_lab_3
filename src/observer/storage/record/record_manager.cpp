@@ -519,19 +519,26 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
 {
   int col_num = chunk.column_num();
   int max_num = page_header_->record_capacity;
-  int offset = 0;
-  int j =0;
-  for (int i = 0; i < col_num; i++)
+  Bitmap bitmap(bitmap_,page_header_->record_capacity);
+  int index = 0;
+
+  index = bitmap.next_setted_bit(0);
+  while(index!=-1)
   {
-    int id = chunk.column_ids(i);
-    while (id>j)
+    for(int i=0;i<col_num;i++)
     {
-      offset = offset+get_field_len(j)*max_num;
-      j++;
+      unsigned int offset = 0;
+      int j = 0;
+      int id = chunk.column_ids(i);
+      while (j<id)
+      {
+        offset += get_field_len(j)*max_num;
+      }
+      chunk.column_ptr(i)->append_one(get_record_data(0)+index*get_field_len(0)+offset);
     }
-    chunk.column_ptr(i)->append(get_record_data(0)+offset,page_header_->record_num);
-    /* code */
+    index = bitmap.next_setted_bit(index+1);
   }
+ 
   return RC::SUCCESS;
 }
 
