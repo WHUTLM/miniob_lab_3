@@ -400,7 +400,7 @@ RC RowRecordPageHandler::get_record(const RID &rid, Record &record)
   }
 
   record.set_rid(rid);
-  record.set_data(get_record_data(rid.slot_num), page_header_->record_real_size);
+  record.copy_data(get_record_data(rid.slot_num), page_header_->record_real_size);
   return RC::SUCCESS;
 }
 
@@ -534,7 +534,7 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
       int id = chunk.column_ids(i);
       if (id >= page_header_ ->column_num){
         LOG_ERROR("getchunk Invalid column num;%d, column is empty, page_num %d.", id, 
-        frame ->page_num());
+        frame_->page_num());
         return RC::RECORD_NOT_EXIST;
       }      
       while (j<id)
