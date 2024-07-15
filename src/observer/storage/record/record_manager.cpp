@@ -503,7 +503,7 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
   int max_num = page_header_->record_capacity;
 
   record.set_rid(rid);
-  char *part_data= (char*)malloc(page_header_->record_real_size);
+  char* part_data = (char*)malloc(page_header_->record_real_size);
   int offset = 0;
   for(int i=0;i<page_header_->column_num;i++)
   {
@@ -511,7 +511,6 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     offset = offset+get_field_len(i);
   }
   record.set_data(part_data, page_header_->record_real_size);
-  free(part_data);
   return RC::SUCCESS;
 }
 
