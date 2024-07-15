@@ -520,33 +520,26 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
   int col_num = chunk.column_num();
   int max_num = page_header_->record_capacity;
   Bitmap bitmap(bitmap_,page_header_->record_capacity);
-  int index = 0;
-
-
-
-  index = bitmap.next_setted_bit(0);
-  while(index!=-1)
+  for (int i = 0; i < col_num; i++)
   {
-    for(int i=0;i<col_num;i++)
-    {
-      unsigned int offset = 0;
-      int j = 0;
-      int id = chunk.column_ids(i);
-      if (id >= page_header_ ->column_num){
+    /* code */
+    int id = chunk.column_ids(i);
+    if (id >= page_header_ ->column_num){
         LOG_ERROR("getchunk Invalid column num;%d, column is empty, page_num %d.", id, 
         frame_->page_num());
         return RC::RECORD_NOT_EXIST;
       }      
-      while (j<id)
-      {
-        offset += get_field_len(j)*max_num;
-        j++;
-      }
-      chunk.column_ptr(i)->append_one(get_record_data(0)+index*get_field_len(id)+offset);
+    int index = bitmap.next_setted_bit(0);
+    while (index!=-1)
+    {
+      char* column_data = get_field_data(index,id);
+      chunk.column(i).append_one(column_data);
+      index = bitmap.next_setted_bit(index+1);
     }
-    index = bitmap.next_setted_bit(index+1);
+    
+    
+
   }
- 
   return RC::SUCCESS;
 }
 
