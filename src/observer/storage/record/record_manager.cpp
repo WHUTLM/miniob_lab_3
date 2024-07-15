@@ -510,7 +510,7 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     memcpy(part_data+offset,get_record_data_for_pax(rid.slot_num,i)+max_num*offset,get_field_len(i));
     offset = offset+get_field_len(i);
   }
-
+  free(part_data);
   record.set_data(part_data, page_header_->record_real_size);
   return RC::SUCCESS;
 }
@@ -527,13 +527,13 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
     int id = chunk.column_ids(i);
     while (id>j)
     {
-      offset = get_field_len(j)*max_num;
+      offset = offset+get_field_len(j)*max_num;
       j++;
     }
     chunk.column_ptr(i)->append(get_record_data(0)+offset,page_header_->record_num);
     /* code */
   }
-    return RC::SUCCESS;
+  return RC::SUCCESS;
 }
 
 char *PaxRecordPageHandler::get_field_data(SlotNum slot_num, int col_id)
