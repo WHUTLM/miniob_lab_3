@@ -510,8 +510,8 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     memcpy(part_data+offset,get_record_data_for_pax(rid.slot_num,i)+max_num*offset,get_field_len(i));
     offset = offset+get_field_len(i);
   }
-  free(part_data);
   record.set_data(part_data, page_header_->record_real_size);
+  free(part_data);
   return RC::SUCCESS;
 }
 
