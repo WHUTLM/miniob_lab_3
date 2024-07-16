@@ -476,7 +476,7 @@ RC PaxRecordPageHandler::delete_record(const RID *rid)
       LOG_ERROR("Failed to delete record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
       // return rc; // ignore errors
     }
-
+    
     return RC::SUCCESS;
   } else {
     LOG_DEBUG("Invalid slot_num %d, slot is empty, page_num %d.", rid->slot_num, frame_->page_num());
@@ -506,7 +506,8 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     memcpy(part_data+offset,get_field_data(rid.slot_num,i),get_field_len(i));
     offset = offset+get_field_len(i);
   }
-  record.set_data(part_data, page_header_->record_real_size);
+  record.copy_data(part_data, page_header_->record_real_size);
+  free(part_data);
   return RC::SUCCESS;
 }
 
@@ -520,8 +521,8 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
     /* code */
     int id = chunk.column_ids(i);
     if (id >= page_header_ ->column_num){
-        LOG_ERROR("getchunk Invalid column num;%d, column is empty, page_num %d.", id, 
-        frame_->page_num());
+        // LOG_ERROR("getchunk Invalid column num;%d, column is empty, page_num %d.", id, 
+        // frame_->page_num());
         return RC::RECORD_NOT_EXIST;
       }      
     int index = bitmap.next_setted_bit(0);
