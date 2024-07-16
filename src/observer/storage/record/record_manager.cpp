@@ -441,15 +441,12 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
     // return rc; // ignore errors
   }
   //一个页面最多能存储多少个元组
-  int max_num = page_header_->record_capacity;
   int offset = 0;
   
-  char *record_data_first = get_record_data(0);
-
   for(int i=0;i<page_header_->column_num;i++)
   { 
+    memcpy(get_field_data(index,i),data+offset,get_field_len(i));
     //复制进页面
-    memcpy(record_data_first+offset*max_num+index*get_field_len(i),data+offset,get_field_len(i));
     offset = get_field_len(i)+offset;
   }
   frame_->mark_dirty();
@@ -500,14 +497,13 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     LOG_ERROR("Invalid slot_num:%d, slot is empty, page_num %d.", rid.slot_num, frame_->page_num());
     return RC::RECORD_NOT_EXIST;
   }
-  int max_num = page_header_->record_capacity;
 
   record.set_rid(rid);
   char* part_data = (char*)malloc(page_header_->record_real_size);
   int offset = 0;
   for(int i=0;i<page_header_->column_num;i++)
   {
-    memcpy(part_data+offset,get_record_data_for_pax(rid.slot_num,i)+max_num*offset,get_field_len(i));
+    memcpy(part_data+offset,get_field_data(rid.slot_num,i),get_field_len(i));
     offset = offset+get_field_len(i);
   }
   record.set_data(part_data, page_header_->record_real_size);
@@ -518,7 +514,6 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
 RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
 {
   int col_num = chunk.column_num();
-  int max_num = page_header_->record_capacity;
   Bitmap bitmap(bitmap_,page_header_->record_capacity);
   for (int i = 0; i < col_num; i++)
   {
@@ -536,9 +531,6 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
       chunk.column(i).append_one(column_data);
       index = bitmap.next_setted_bit(index+1);
     }
-    
-    
-
   }
   return RC::SUCCESS;
 }
