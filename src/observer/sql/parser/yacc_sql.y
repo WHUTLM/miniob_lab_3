@@ -111,6 +111,11 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         LE
         GE
         NE
+        SUM
+        COUNT
+        AVG
+        MIN
+        MAX
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -146,6 +151,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <string>              relation
 %type <comp>                comp_op
 %type <rel_attr>            rel_attr
+/* %type <rel_attr_list>       rel_attr_list */
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
 %type <value_list>          value_list
@@ -155,6 +161,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <relation_list>       rel_list
 %type <expression>          expression
 %type <expression_list>     expression_list
+%type <expression>          aggregate_function
 %type <expression_list>     group_by
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
@@ -531,6 +538,27 @@ expression:
       $$ = new StarExpr();
     }
     // your code here
+    | aggregate_function {
+      $$ = $1;
+      // create_aggregate_expression("SUM", $3, sql_string, &@$);
+    }
+
+aggregate_function:
+    COUNT LBRACE expression RBRACE {
+      $$ = create_aggregate_expression("COUNT", $3, sql_string, &@$);
+    }
+    | SUM LBRACE expression RBRACE {
+      $$ = create_aggregate_expression("SUM", $3, sql_string, &@$);
+    }
+    | AVG LBRACE expression RBRACE {
+      $$ = create_aggregate_expression("AVG", $3, sql_string, &@$);
+    }
+    | MIN LBRACE expression RBRACE {
+      $$ = create_aggregate_expression("MIN", $3, sql_string, &@$);
+    }
+    | MAX LBRACE expression RBRACE {
+      $$ = create_aggregate_expression("MAX", $3, sql_string, &@$);
+    }
     ;
 
 rel_attr:
@@ -662,6 +690,9 @@ group_by:
     {
       $$ = nullptr;
     }
+    | GROUP BY expression_list{      
+      $$ = $3;
+    }
     ;
 load_data_stmt:
     LOAD DATA INFILE SSS INTO TABLE ID 
@@ -710,3 +741,4 @@ int sql_parse(const char *s, ParsedSqlResult *sql_result) {
   yylex_destroy(scanner);
   return result;
 }
+

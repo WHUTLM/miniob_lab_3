@@ -100,8 +100,42 @@ void AggregateVecPhysicalOperator::update_aggregate_state(void *state, const Col
 
 RC AggregateVecPhysicalOperator::next(Chunk &chunk)
 {
-  // your code here
-  exit(-1);
+  int col_num = chunk.column_num();
+  for(int col_id =0 ;col_id<col_num ;col_id++)
+  {
+    
+    if (chunk.column_ptr(col_id)->attr_type()==AttrType::INTS)
+    {
+      unique_ptr<Column> column1 = make_unique<Column>(AttrType::INTS, 4);
+      output_chunk_.add_column(std::move(column1),col_id);
+      int col_data = 0;
+      for (int row_id = 0; row_id < chunk.column_ptr(col_id)->count(); row_id++)
+      {
+        Value part_value = chunk.get_value(row_id,col_id);
+        col_data += part_value.get_int();
+        // char* data = (char*)malloc(sizeof())
+        char * data = (char*)&col_data;
+        output_chunk_.column_ptr(col_id)->append_one(data);
+        /* code */
+      }
+      
+    }
+    else if(chunk.column_ptr(col_id)->attr_type()==AttrType::FLOATS)
+    {
+      unique_ptr<Column> column1 = make_unique<Column>(AttrType::FLOATS,sizeof(float));
+      output_chunk_.add_column(std::move(column1),col_id);
+      float col_data = 0;
+      for (int row_id = 0; row_id < chunk.column_ptr(col_id)->count(); row_id++)
+      {
+        Value part_value = chunk.get_value(row_id,col_id);
+        col_data += part_value.get_float();
+        char * data = (char*)&col_data;
+        output_chunk_.column_ptr(col_id)->append_one(data);
+        /* code */
+      }
+    }
+  }
+  return RC::SUCCESS;
 }
 
 RC AggregateVecPhysicalOperator::close()
