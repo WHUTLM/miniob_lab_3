@@ -43,6 +43,7 @@ public:
 
   /**
    * @brief 将 groups_chunk 和 aggrs_chunk 写入到哈希表中。哈希表中记录了聚合结果。
+   * groups_chunk是分组列chunk，aggrs_chunk是聚集结果的chunk。
    */
   virtual RC add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk) = 0;
 
@@ -97,7 +98,10 @@ public:
 private:
   /// group by values -> aggregate values
   StandardHashTable                aggr_values_;
+  //记录聚合操作的类别
   std::vector<AggregateExpr::Type> aggr_types_;
+
+
 };
 
 /**

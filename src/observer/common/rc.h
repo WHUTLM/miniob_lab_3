@@ -77,6 +77,7 @@ See the Mulan PSL v2 for more details. */
   DEFINE_RC(LOG_FILE_FULL)               \
   DEFINE_RC(LOG_ENTRY_INVALID)
 
+
 enum class RC
 {
 #define DEFINE_RC(name) name,

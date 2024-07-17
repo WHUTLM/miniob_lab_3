@@ -14,8 +14,57 @@ See the Mulan PSL v2 for more details. */
 
 RC StandardAggregateHashTable::add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk)
 {
-  // your code here
-  exit(-1);
+  //这里需要做一个假设，每一个column都有相同的count
+  int col_num_groups = groups_chunk.column_num();
+  int col_num_aggrs  = aggrs_chunk.column_num();
+  int count = groups_chunk.column_ptr(0)->count();
+  // for (int i = 0; i < count; i++)
+  // {
+  //   /* code */
+  // }
+  for(int row_id=0;row_id<count;row_id++)
+  {
+    vector<Value> group_key;
+    vector<Value> aggr_value;
+
+
+
+    for (int col_id = 0; col_id < col_num_groups; col_id++)
+    {
+      group_key.push_back(groups_chunk.get_value(col_id,row_id));
+    }
+    
+    for (int col_id = 0; col_id < col_num_aggrs; col_id++)
+    {
+      aggr_value.push_back(aggrs_chunk.get_value(col_id,row_id));
+      /* code */
+    }
+    
+    StandardHashTable::iterator it = aggr_values_.find(group_key);
+    if (it == aggr_values_.end())
+    {
+      aggr_values_.insert(std::make_pair(group_key, aggr_value));
+      //没找到，直接插入新的键值对
+      /* code */
+    }
+    else
+    {
+      //找到了，更新值
+      for (int i = 0; i < it->second.size(); i++)
+      {
+        if (aggr_value[i].attr_type() == AttrType::INTS)
+        {
+          it->second[i].set_int(aggr_value[i].get_int()+it->second[i].get_int());
+          /* code */
+        }
+        else if(aggr_value[i].attr_type() == AttrType::FLOATS)
+        {
+          it->second[i].set_int(aggr_value[i].get_float()+it->second[i].get_float());
+        }
+      }      
+    } 
+  }
+  return RC::SUCCESS;
 }
 
 void StandardAggregateHashTable::Scanner::open_scan()
@@ -34,6 +83,9 @@ RC StandardAggregateHashTable::Scanner::next(Chunk &output_chunk)
     auto &aggrs           = it_->second;
     for (int i = 0; i < output_chunk.column_num(); i++) {
       auto col_idx = output_chunk.column_ids(i);
+      // 这通常用于多列的聚合查询结果，其中一些列是分组依据的列（group_by_values），
+      // 而其他列是聚合函数的结果（aggrs）。通过这种方式，可以构建一个包含分组键和聚合
+      // 结果的复合数据结构，然后将其输出或进一步处理。
       if (col_idx >= static_cast<int>(group_by_values.size())) {
         output_chunk.column(i).append_one((char *)aggrs[col_idx - group_by_values.size()].data());
       } else {

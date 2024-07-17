@@ -29,6 +29,8 @@ RC ProjectVecPhysicalOperator::open(Trx *trx)
   if (children_.empty()) {
     return RC::SUCCESS;
   }
+
+  //在这里进入了group by open()函数
   RC rc = children_[0]->open(trx);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open child operator: %s", strrc(rc));

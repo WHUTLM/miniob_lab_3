@@ -27,6 +27,7 @@ RC ExprVecPhysicalOperator::open(Trx *trx)
 
   PhysicalOperator &child = *children_[0];
   RC                rc    = child.open(trx);
+
   if (OB_FAIL(rc)) {
     LOG_INFO("failed to open child operator. rc=%s", strrc(rc));
     return rc;
@@ -38,6 +39,7 @@ RC ExprVecPhysicalOperator::next(Chunk &chunk)
 {
   RC rc = RC::SUCCESS;
   ASSERT(children_.size() == 1, "group by operator only support one child, but got %d", children_.size());
+
 
   PhysicalOperator &child = *children_[0];
   chunk.reset();

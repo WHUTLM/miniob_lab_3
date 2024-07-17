@@ -64,6 +64,7 @@ RC AggregateVecPhysicalOperator::open(Trx *trx)
     return rc;
   }
 
+//在这里调用了get_chunk函数获取了目标表的chunk_数据
   while (OB_SUCC(rc = child.next(chunk_))) {
     for (size_t aggr_idx = 0; aggr_idx < aggregate_expressions_.size(); aggr_idx++) {
       Column column;
@@ -100,42 +101,27 @@ void AggregateVecPhysicalOperator::update_aggregate_state(void *state, const Col
 
 RC AggregateVecPhysicalOperator::next(Chunk &chunk)
 {
-  int col_num = chunk.column_num();
-  for(int col_id =0 ;col_id<col_num ;col_id++)
-  {
-    
-    if (chunk.column_ptr(col_id)->attr_type()==AttrType::INTS)
-    {
-      unique_ptr<Column> column1 = make_unique<Column>(AttrType::INTS, 4);
-      output_chunk_.add_column(std::move(column1),col_id);
-      int col_data = 0;
-      for (int row_id = 0; row_id < chunk.column_ptr(col_id)->count(); row_id++)
-      {
-        Value part_value = chunk.get_value(row_id,col_id);
-        col_data += part_value.get_int();
-        // char* data = (char*)malloc(sizeof())
-        char * data = (char*)&col_data;
-        output_chunk_.column_ptr(col_id)->append_one(data);
-        /* code */
-      }
-      
+  RC rc = RC::SUCCESS;
+  if (emitted_) {
+    rc = RC::RECORD_EOF;
+    return rc;
+  }
+  emitted_ = true;
+
+  output_chunk_.reset_data();
+  chunk.reset();
+  for (size_t aggr_idx = 0; aggr_idx < aggregate_expressions_.size(); aggr_idx++) {
+    auto *aggregate_expr = static_cast<AggregateExpr *>(aggregate_expressions_[aggr_idx]);
+    if (aggregate_expr->value_type() == AttrType::INTS) {
+      output_chunk_.column(aggr_idx).append_one(reinterpret_cast<char*>(&(((SumState<int> *)aggr_values_.at(aggr_idx))->value)));
     }
-    else if(chunk.column_ptr(col_id)->attr_type()==AttrType::FLOATS)
-    {
-      unique_ptr<Column> column1 = make_unique<Column>(AttrType::FLOATS,sizeof(float));
-      output_chunk_.add_column(std::move(column1),col_id);
-      float col_data = 0;
-      for (int row_id = 0; row_id < chunk.column_ptr(col_id)->count(); row_id++)
-      {
-        Value part_value = chunk.get_value(row_id,col_id);
-        col_data += part_value.get_float();
-        char * data = (char*)&col_data;
-        output_chunk_.column_ptr(col_id)->append_one(data);
-        /* code */
-      }
+    else if (aggregate_expr->value_type() == AttrType::FLOATS) {
+      output_chunk_.column(aggr_idx).append_one(reinterpret_cast<char*>(&(((SumState<float> *)aggr_values_.at(aggr_idx))->value)));
     }
   }
-  return RC::SUCCESS;
+  chunk.reference(output_chunk_);
+
+  return rc;
 }
 
 RC AggregateVecPhysicalOperator::close()

@@ -379,6 +379,7 @@ RC PhysicalPlanGenerator::create_vec_plan(GroupByLogicalOperator &logical_oper, 
 {
   RC rc = RC::SUCCESS;
   unique_ptr<PhysicalOperator> physical_oper = nullptr;
+  //group_by_expressions()就是指group by语句
   if (logical_oper.group_by_expressions().empty()) {
     physical_oper = make_unique<AggregateVecPhysicalOperator>(std::move(logical_oper.aggregate_expressions()));
   } else {
