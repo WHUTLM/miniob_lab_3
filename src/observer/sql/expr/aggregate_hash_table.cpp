@@ -14,57 +14,55 @@ See the Mulan PSL v2 for more details. */
 
 RC StandardAggregateHashTable::add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk)
 {
-  //这里需要做一个假设，每一个column都有相同的count
-  int col_num_groups = groups_chunk.column_num();
-  int col_num_aggrs  = aggrs_chunk.column_num();
-  int count = groups_chunk.column_ptr(0)->count();
-  // for (int i = 0; i < count; i++)
-  // {
-  //   /* code */
-  // }
-  for(int row_id=0;row_id<count;row_id++)
-  {
-    vector<Value> group_key;
-    vector<Value> aggr_value;
+  // 假设传入的groups_chunk和aggrs_chunk是已经根据group_by_expr和aggr_expr筛选后得到的chunk
 
+  // 将group_chunk转化为key
+  // 判断key是否在hash内
+  // 若在，则将aggrs_chunk加入到值中。
+  // 如不在，则将aggrs_chunk转化为Value，然后加入进去。
 
+  int rows = groups_chunk.rows();
+  // 一行一行处理
+  for (size_t i = 0; i < rows; i++){
+    std::vector<Value> hashkey;
+    std::vector<Value> hashvalue;
+    // 计算key
+    for (size_t j = 0; j < groups_chunk.column_num(); j++) {
+      hashkey.emplace_back(groups_chunk.get_value(j, i));
+    }
 
-    for (int col_id = 0; col_id < col_num_groups; col_id++)
-    {
-      group_key.push_back(groups_chunk.get_value(col_id,row_id));
+    // 计算value
+    for (size_t j = 0; j < aggrs_chunk.column_num(); j++) {
+      hashvalue.emplace_back(aggrs_chunk.get_value(j, i));
     }
     
-    for (int col_id = 0; col_id < col_num_aggrs; col_id++)
-    {
-      aggr_value.push_back(aggrs_chunk.get_value(col_id,row_id));
-      /* code */
-    }
-    
-    StandardHashTable::iterator it = aggr_values_.find(group_key);
-    if (it == aggr_values_.end())
-    {
-      aggr_values_.insert(std::make_pair(group_key, aggr_value));
-      //没找到，直接插入新的键值对
-      /* code */
-    }
-    else
-    {
-      //找到了，更新值
-      for (int i = 0; i < it->second.size(); i++)
-      {
-        if (aggr_value[i].attr_type() == AttrType::INTS)
-        {
-          it->second[i].set_int(aggr_value[i].get_int()+it->second[i].get_int());
-          /* code */
-        }
-        else if(aggr_value[i].attr_type() == AttrType::FLOATS)
-        {
-          it->second[i].set_int(aggr_value[i].get_float()+it->second[i].get_float());
-        }
-      }      
+    // 判断key是否在hashtable内
+    auto it = aggr_values_.find(hashkey);
+    // 键存在于哈希表中
+    if (it != aggr_values_.end()) {
+      std::vector<Value>& old_value = it->second;
+      for(size_t value_idx = 0; value_idx < old_value.size(); value_idx++){
+        // if (aggr_types_[value_idx] == AggregateExpr::Type::SUM) {
+          // TODO:: 使用Aggregator
+          if (old_value[value_idx].attr_type()== AttrType::INTS) {
+            old_value[value_idx].set_int(old_value[value_idx].get_int()+hashvalue[value_idx].get_int());
+          } else if (old_value[value_idx].attr_type() == AttrType::FLOATS) {
+            old_value[value_idx].set_float(old_value[value_idx].get_float()+hashvalue[value_idx].get_float());
+          } else {
+            ASSERT(false, "not supported value type");
+          }
+        // } else {
+        //   ASSERT(false, "not supported aggregation type");
+        // }
+      }
     } 
+    // 键不存在于哈希表中
+    else {
+      aggr_values_[hashkey] = hashvalue;
+    }
   }
   return RC::SUCCESS;
+  
 }
 
 void StandardAggregateHashTable::Scanner::open_scan()
