@@ -259,11 +259,21 @@ void LinearProbingAggregateHashTable<V>::resize_if_need()
 }
 
 template <typename V>
-void LinearProbingAggregateHashTable<V>::selective_load_slow(int* memory,int offset,V* val,int* inv)
+void LinearProbingAggregateHashTable<V>::selective_load_slow_key(int* memory,int offset,int* val,int* inv)
 {
     for (int i = 0; i < SIMD_WIDTH; i++) {
-    if (inv_ptr[i] == -1) {
-      vec[i] = memory[offset++];
+    if (inv[i] == -1) {
+      val[i] = memory[offset++];
+    }
+  }
+}
+
+template <typename V>
+void LinearProbingAggregateHashTable<V>::selective_load_slow_value(V* memory,int offset,V* val,int* inv)
+{
+    for (int i = 0; i < SIMD_WIDTH; i++) {
+    if (inv[i] == -1) {
+      val[i] = memory[offset++];
     }
   }
 }
@@ -272,7 +282,11 @@ template <typename V>
 vector<int> LinearProbingAggregateHashTable<V>::get_hash(vector<int> keys)
 {
   vector<int> hash_value;
-  return (key % capacity_ + capacity_) % capacity_;
+  for(int i=0;i<8;i++)
+  {
+    hash_value.push_back((keys[i]% capacity_ + capacity_) % capacity_);
+  }
+  return hash_value;
 }
 
 template <typename V>
@@ -293,49 +307,53 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
   // off 全部初始化为 0
   
   int i =0;
-  for (; i + SIMD_WIDTH<=len;)
+  while(i+SIMD_WIDTH<=len)
   {
     // __m256i vec = _mm256_loadu_si256((__m256i*)&inv);
     // (key % capacity_ + capacity_) % capaci
-    selective_load_slow(input_keys,i,key.data(),inv);
-    selective_load_slow(input_values,i,value.data(),inv);
-    for (int i = 0; i < 8; i++)
+    selective_load_slow_key(input_keys,i,key.data(),inv);
+    selective_load_slow_value(input_values,i,value.data(),inv);
+
+    for (int j = 0; j < 8; j++)
     {
-      i -= inv[i];
+      i -= inv[j];
       /* code */
     }
     
 
     vector<int> hash_value = get_hash(key);
-    for(int i=0;i<8;i++)
+    for(int j=0;j<8;j++)
     {
-      int index = hash_value[i];
+      int index = hash_value[j];
       if(keys_[index] == EMPTY_KEY)
       {
-        keys_[index] = key[i];
-        values_[index] = value[i];
-        off[i] = 0;
-        inv[i] = -1;//需要更新
+        keys_[index] = key[j];
+        values_[index] = value[j];
+        off[j] = 0;
+        inv[j] = -1;//需要更新
       }
-      else if (keys_[index] != key[i])
+      else if (keys_[index] != key[j])
       {
-        off[i]++;
-        inv[i] = 0;//不能更新
+        off[j]++;
+        inv[j] = 0;//不能更新
         /* code */
       }
       else
       {
-        off[i] = 0;
-        inv[i] = -1;
-        values_[index] += value[i];
+        off[j] = 0;
+        inv[j] = -1;
+        values_[index] += value[j];
       }
     }
+
+
+  }
 
   // Handle remaining elements not covered by SIMD
   for (; i < len; ++i) {
     int key_it = input_keys[i];
     V value_it = input_values[i];
-    int index = (key % capacity_ + capacity_) % capacity_;
+    int index = (key_it % capacity_ + capacity_) % capacity_;
 
     // Linear probe
     while (keys_[index]!=EMPTY_KEY&&keys_[index]!=key_it)
@@ -349,9 +367,6 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
       keys_[index] = key_it;
       values_[index] = value_it;
     }
-  }
-
-
     // selective_load(input_keys,off[i],value,_mm256_loadu_si256((__m256i*)&inv););
     
     // i -= mm256_sum_epi32(inv);
@@ -376,8 +391,6 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
   //7. 通过标量线性探测，处理剩余键值对
   }
   resize_if_need();
-  free(inv);
-  free(off);
 }
 
 template <typename V>
