@@ -113,6 +113,8 @@ template <typename V>
 class LinearProbingAggregateHashTable : public AggregateHashTable
 {
 public:
+  vector<int> get_hash(vector<int> keys);
+  void selective_load_slow(int* memory,int offset,V* val,int* inv);
   class Scanner : public AggregateHashTable::Scanner
   {
   public:
