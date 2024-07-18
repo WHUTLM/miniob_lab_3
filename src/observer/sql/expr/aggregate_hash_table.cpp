@@ -288,6 +288,24 @@ vector<int> LinearProbingAggregateHashTable<V>::get_hash(vector<int> keys)
   }
   return hash_value;
 }
+template <typename V>
+void LinearProbingAggregateHashTable<V>::deal_lost(int key,V val)
+{
+  int index = (key % capacity_ + capacity_) % capacity_;
+  // Linear probe
+  while (keys_[index]!=EMPTY_KEY&&keys_[index]!=key)
+  {
+    index++;        /* code */
+  }
+  // Insert or update
+  if (keys_[index] == key) {
+    size_++;
+    values_[index] += val;
+  } else {
+    keys_[index] = key;
+    values_[index] = val;
+  }
+}
 
 template <typename V>
 void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_values, int len)
@@ -334,8 +352,10 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
     {
     // 6. 更新 inv 和 off。如果本次循环key[i] 聚合完成，则inv[i]=-1，表示该位置在下次循环中读取新的键值对。
       int index = hash_value[j];
+      index += off[j];
       if(keys_[index] == EMPTY_KEY)
       {
+        size_++;
         keys_[index] = key[j];
         values_[index] = value[j];
         off[j] = 0;
@@ -348,17 +368,25 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
       }
       else
       {
+        //进行聚合
         off[j] = 0;
         inv[j] = -1;
         values_[index] += value[j];
       }
     }
-
-
+  }
+  //7. 通过标量线性探测，处理剩余键值对
+  //处理遗留在key和value中的键值对
+  for(int j=0;j<8;j++)
+  {
+    if(inv[j]==0)
+    {
+      deal_lost(key[j],value[j]);
+    }
   }
 
-  //7. 通过标量线性探测，处理剩余键值对
-  for (; i < len; ++i) {
+
+  for (; i < len; i++) {
     int key_it = input_keys[i];
     V value_it = input_values[i];
     int index = (key_it % capacity_ + capacity_) % capacity_;
@@ -372,10 +400,10 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
     if (keys_[index] == key_it) {
       values_[index] += value_it;
     } else {
+      size_++;
       keys_[index] = key_it;
       values_[index] = value_it;
     }
-    
   }
   resize_if_need();
 }

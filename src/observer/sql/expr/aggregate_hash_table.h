@@ -116,7 +116,7 @@ public:
   vector<int> get_hash(vector<int> keys);
   void selective_load_slow_key(int* memory,int offset,int* val,int* inv);
   void selective_load_slow_value(V* memory,int offset,V* val,int* inv);
-
+  void deal_lost(int key,V val);
   class Scanner : public AggregateHashTable::Scanner
   {
   public:
